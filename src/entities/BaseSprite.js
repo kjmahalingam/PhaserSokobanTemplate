@@ -1,4 +1,5 @@
-import * as Phaser from 'phaser';
+import Phaser from 'phaser';
+import { DURATION } from '../utils/Movement'
 
 class BaseSprite extends Phaser.GameObjects.Sprite {
   constructor(scene, x, y, tile, name) {
@@ -8,9 +9,18 @@ class BaseSprite extends Phaser.GameObjects.Sprite {
   }
 
   moveTo(tile) {
-    this.x = tile.pixelX;
-    this.y = tile.pixelY;
     this.tile = tile;
+    this.scene.tweens.add({
+      targets: this,
+      x: tile.pixelX,
+      y: tile.pixelY,
+      duration: DURATION,
+      ease: Phaser.Math.Easing.Quartic.Out
+    });
+  }
+
+  get isMoving() {
+    return this.scene.tweens.isTweening(this);
   }
 }
 

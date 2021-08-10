@@ -4,3 +4,5 @@ export const DIRECTIONS = {
     WEST: 'W',
     EAST: 'E'
 };
+
+export const DURATION = 200;

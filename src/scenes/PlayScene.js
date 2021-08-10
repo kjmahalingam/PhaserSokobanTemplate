@@ -1,8 +1,8 @@
-import { Scene } from 'phaser';
+import Phaser from 'phaser';
 import { Crate, Player } from '../entities';
 import { DIRECTIONS } from '../utils/Movement';
 
-export default class PlayScene extends Scene {
+export default class PlayScene extends Phaser.Scene {
     constructor() {
         super();
     }
@@ -18,13 +18,12 @@ export default class PlayScene extends Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.tileMap = this.make.tilemap({ key: 'level' });
         this.tileSet = this.tileMap.addTilesetImage('sokoban', 'sokoban', 128, 128);
-        this.victory = false;
         this.createLevel();
     }
 
     update() {
         if (Phaser.Input.Keyboard.JustDown(this.cursors.space)) this.scene.restart();
-        if (this.victory) return;
+        if (this.player.victory || this.player.isMoving) return;
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) this.moveEntities(DIRECTIONS.NORTH);
         if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) this.moveEntities(DIRECTIONS.SOUTH);
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) this.moveEntities(DIRECTIONS.WEST);
@@ -47,7 +46,7 @@ export default class PlayScene extends Scene {
             nextCrate.moveTo(beyondFloorTile);
         };
         this.player.moveTo(nextFloorTile);
-        this.checkVictory();
+        this.player.checkVictory(this.goalTile);
     }
 
     createLevel() {
@@ -67,47 +66,43 @@ export default class PlayScene extends Scene {
         this.floorLayer = this.tileMap.createLayer('Floors', this.tileSet, x, y);
         this.wallLayer = this.tileMap.createLayer('Walls', this.tileSet, x, y);
         this.goalLayer = this.tileMap.createLayer('Goals', this.tileSet, x, y);
-        this.goalTile = this.getGoalTile();
     }
 
     createPlayer() {
-        const tile = this.getSpawnTile();
-        const { x, y } = this.tileMap.tileToWorldXY(tile.x, tile.y);
-        this.player = new Player(this, x, y, tile);
+        const { x, y } = this.tileMap.tileToWorldXY(this.spawnTile.x, this.spawnTile.y);
+        this.player = new Player(this, x, y, this.spawnTile);
         this.add.existing(this.player);
     }
 
     createCrates() {
-        const crateTiles = this.getCrateTiles();
-        const crates = crateTiles.map((tile) => {
+        this.crates = this.crateTiles.map((tile) => {
             const { x, y } = this.tileMap.tileToWorldXY(tile.x, tile.y);
             const crate = new Crate(this, x, y, tile);
             this.add.existing(crate);
             return crate;
         });
-        this.crates = this.add.group(crates);
     }
 
     getCrateByTile(tile) {
         const { x, y } = this.tileMap.tileToWorldXY(tile.x, tile.y);
-        return this.crates.getChildren().find(c => c.x === x && c.y === y);
+        return this.crates.find(c => c.x === x && c.y === y);
     }
 
-    getSpawnTile() {
+    get spawnTile() {
         const spawns = this.getTilesByLayer(this.spawnLayer);
         if (!spawns) throw new Error('There is no spawn location.');
         if (spawns.length !== 1) throw new Error(' There is not exactly one spawn location.');
         return spawns[0];
     }
 
-    getGoalTile() {
+    get goalTile() {
         const goals = this.getTilesByLayer(this.goalLayer);
         if (!goals) throw new Error('There is no goal location.');
         if (goals.length !== 1) throw new Error(' There is not exactly one goal location.');
         return goals[0];
     }
 
-    getCrateTiles() {
+    get crateTiles() {
         return this.getTilesByLayer(this.crateLayer);
     }
 
@@ -134,10 +129,6 @@ export default class PlayScene extends Scene {
 
     filterTilesByExistence(tile) {
         return tile.index > -1;
-    }
-
-    checkVictory() {
-        this.victory = this.goalTile.x === this.player.tile.x && this.goalTile.y === this.player.tile.y;
     }
 
     centerCamera() {
