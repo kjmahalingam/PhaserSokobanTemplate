@@ -1,14 +1,20 @@
 import Phaser from 'phaser';
 import { Player, NowCrate, ThenCrate } from '../entities';
-import { DIRECTIONS } from '../utils/Movement';
+import { DURATION, DIRECTIONS } from '../utils/Movement';
+import { MAX_LEVEL } from '../utils/Levels';
 
 export default class PlayScene extends Phaser.Scene {
     constructor() {
         super();
     }
 
+    init(data) {
+        this.level = data.level || 1;
+        this.victory = false;
+    }
+
     preload() {
-        this.load.tilemapTiledJSON('level', 'src/assets/levels/level.json');
+        this.load.tilemapTiledJSON(`level-${this.level}`, `src/assets/levels/level-${this.level}.json`);
         this.load.image('sokoban', 'src/assets/tilesheets/sokoban.png');
         this.load.image('now_crate', 'src/assets/sprites/now_crate.png');
         this.load.image('then_crate', 'src/assets/sprites/then_crate.png');
@@ -17,19 +23,24 @@ export default class PlayScene extends Phaser.Scene {
 
     create() {
         this.cursors = this.input.keyboard.createCursorKeys();
-        this.tileMap = this.make.tilemap({ key: 'level' });
+        this.tileMap = this.make.tilemap({ key: `level-${this.level}` });
         this.tileSet = this.tileMap.addTilesetImage('sokoban', 'sokoban', 128, 128);
         this.createLevel();
+        this.input.keyboard.on('keydown', () => {
+            if (this.victory) this.scene.restart( { level: this.level >= MAX_LEVEL ? 1 : this.level + 1 });
+        });
     }
 
     update() {
-        if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R))) this.scene.restart();
-        if (this.player.victory || this.player.isMoving) return;
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.space)) this.timeTravel();
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) this.moveEntities(DIRECTIONS.NORTH);
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) this.moveEntities(DIRECTIONS.SOUTH);
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) this.moveEntities(DIRECTIONS.WEST);
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) this.moveEntities(DIRECTIONS.EAST);
+        // TODO: Implement undo
+        // if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z))) this.undo();
+        if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X))) this.scene.restart({ level: this.level });
+        if (this.victory || this.player.isMoving) return;
+        if (this.input.keyboard.checkDown(this.cursors.space, DURATION)) this.timeTravel();
+        if (this.input.keyboard.checkDown(this.cursors.up, DURATION)) this.moveEntities(DIRECTIONS.NORTH);
+        if (this.input.keyboard.checkDown(this.cursors.down, DURATION)) this.moveEntities(DIRECTIONS.SOUTH);
+        if (this.input.keyboard.checkDown(this.cursors.left, DURATION)) this.moveEntities(DIRECTIONS.WEST);
+        if (this.input.keyboard.checkDown(this.cursors.right, DURATION)) this.moveEntities(DIRECTIONS.EAST);
     }
 
     moveEntities(direction) {
@@ -53,6 +64,7 @@ export default class PlayScene extends Phaser.Scene {
             }
         };
         this.player.moveTo(nextFloorTile);
+        this.checkVictory();
     }
 
     timeTravel() {
@@ -63,10 +75,12 @@ export default class PlayScene extends Phaser.Scene {
         const nextCrate = this.getCrateByTile(nextFloorTile);
         if (nextCrate) return;
         this.player.moveTo(nextFloorTile);
+        this.checkVictory();
     }
 
     createLevel() {
         this.createLayers();
+        this.createAllGoalTiles();
         this.createPlayer();
         this.createCrates();
         this.centerCamera();
@@ -83,12 +97,14 @@ export default class PlayScene extends Phaser.Scene {
         this.thenCrateLayer.setVisible(false);
         this.floorLayer = this.tileMap.createLayer('Floor', this.tileSet, x, y);
         this.wallLayer = this.tileMap.createLayer('Walls', this.tileSet, x, y);
+        this.crateGoalLayer = this.tileMap.createLayer('CrateGoals', this.tileSet, x, y);
         this.goalLayer = this.tileMap.createLayer('Goal', this.tileSet, x, y);
     }
 
     createPlayer() {
+        this.createSpawnTile();
         const { x, y } = this.tileMap.tileToWorldXY(this.spawnTile.x, this.spawnTile.y);
-        this.player = new Player(this, x, y, this.spawnTile, this.goalTile);
+        this.player = new Player(this, x, y, this.spawnTile);
         this.add.existing(this.player);
     }
 
@@ -116,18 +132,27 @@ export default class PlayScene extends Phaser.Scene {
         return this.crates.find(c => c.x === x && c.y === y);
     }
 
-    get spawnTile() {
+    createSpawnTile() {
         const spawns = this.getTilesByLayer(this.spawnLayer);
         if (!spawns) throw new Error('There is no spawn location.');
         if (spawns.length !== 1) throw new Error(' There is not exactly one spawn location.');
-        return spawns[0];
+        this.spawnTile = spawns[0];
     }
 
-    get goalTile() {
+    createAllGoalTiles() {
+        this.createGoalTile();
+        this.createCrateGoalTiles();
+    }
+
+    createGoalTile() {
         const goals = this.getTilesByLayer(this.goalLayer);
         if (!goals) throw new Error('There is no goal location.');
         if (goals.length !== 1) throw new Error(' There is not exactly one goal location.');
-        return goals[0];
+        this.goalTile = goals[0];
+    }
+
+    createCrateGoalTiles() {
+        this.crateGoalTiles = this.getTilesByLayer(this.crateGoalLayer);
     }
 
     get nowCrateTiles() {
@@ -167,6 +192,12 @@ export default class PlayScene extends Phaser.Scene {
 
     filterTilesByExistence(tile) {
         return tile.index > -1;
+    }
+    
+    checkVictory() {
+        const playerOnGoal = this.player.tile.x === this.goalTile.x && this.player.tile.y === this.goalTile.y;
+        const cratesOnGoals = this.crateGoalTiles.every(tile => this.getCrateByTile(tile));
+        this.victory = playerOnGoal && cratesOnGoals;
     }
 
     centerCamera() {
