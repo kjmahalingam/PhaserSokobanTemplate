@@ -1,14 +1,18 @@
 import BaseSprite from './BaseSprite';
 
-class Player extends BaseSprite {
-  constructor(scene, x, y, tile) {
+export default class Player extends BaseSprite {
+  constructor(scene, x, y, tile, goalTile) {
     super(scene, x, y, tile, 'player');
+    this.goalTile = goalTile;
     this.victory = false;
   }
 
-  checkVictory(goalTile) {
-      this.victory = goalTile.x === this.tile.x && goalTile.y === this.tile.y;
+  moveTo(tile) {
+    super.moveTo(tile);
+    this.checkVictory();
+  }
+
+  checkVictory() {
+      this.victory = this.goalTile.x === this.tile.x && this.goalTile.y === this.tile.y;
   }
 }
-
-export default Player;

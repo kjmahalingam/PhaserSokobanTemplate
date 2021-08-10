@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { DURATION } from '../utils/Movement'
 
-class BaseSprite extends Phaser.GameObjects.Sprite {
+export default class BaseSprite extends Phaser.GameObjects.Sprite {
   constructor(scene, x, y, tile, name) {
     super(scene, x, y, name);
     this.tile = tile;
@@ -23,5 +23,3 @@ class BaseSprite extends Phaser.GameObjects.Sprite {
     return this.scene.tweens.isTweening(this);
   }
 }
-
-export default BaseSprite;

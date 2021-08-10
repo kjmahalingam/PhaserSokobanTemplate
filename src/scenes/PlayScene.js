@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Crate, Player } from '../entities';
+import { Player, NowCrate, ThenCrate } from '../entities';
 import { DIRECTIONS } from '../utils/Movement';
 
 export default class PlayScene extends Phaser.Scene {
@@ -10,7 +10,8 @@ export default class PlayScene extends Phaser.Scene {
     preload() {
         this.load.tilemapTiledJSON('level', 'src/assets/levels/level.json');
         this.load.image('sokoban', 'src/assets/tilesheets/sokoban.png');
-        this.load.image('crate', 'src/assets/sprites/crate.png');
+        this.load.image('now_crate', 'src/assets/sprites/now_crate.png');
+        this.load.image('then_crate', 'src/assets/sprites/then_crate.png');
         this.load.image('player', 'src/assets/sprites/player.png');
     }
 
@@ -22,8 +23,9 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     update() {
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.space)) this.scene.restart();
+        if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R))) this.scene.restart();
         if (this.player.victory || this.player.isMoving) return;
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.space)) this.timeTravel();
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) this.moveEntities(DIRECTIONS.NORTH);
         if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) this.moveEntities(DIRECTIONS.SOUTH);
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) this.moveEntities(DIRECTIONS.WEST);
@@ -43,10 +45,24 @@ export default class PlayScene extends Phaser.Scene {
             if (beyondWallTile) return;
             const beyondCrateTile = this.getCrateByTile(beyondFloorTile);
             if (beyondCrateTile) return;
-            nextCrate.moveTo(beyondFloorTile);
+            if (nextCrate instanceof ThenCrate) {
+                const nowBeyondFloorTile = this.getTimeTravelTile(beyondFloorTile, this.floorLayer);
+                nextCrate.moveTo(beyondFloorTile, nowBeyondFloorTile);
+            } else {
+                nextCrate.moveTo(beyondFloorTile);
+            }
         };
         this.player.moveTo(nextFloorTile);
-        this.player.checkVictory(this.goalTile);
+    }
+
+    timeTravel() {
+        const nextFloorTile = this.getTimeTravelTile(this.player.tile, this.floorLayer)
+        if (!nextFloorTile) return;
+        const nextWallTile = this.getTimeTravelTile(this.player.tile, this.wallLayer)
+        if (nextWallTile) return;
+        const nextCrate = this.getCrateByTile(nextFloorTile);
+        if (nextCrate) return;
+        this.player.moveTo(nextFloorTile);
     }
 
     createLevel() {
@@ -59,28 +75,40 @@ export default class PlayScene extends Phaser.Scene {
     createLayers() {
         const x = 0;
         const y = 0;
-        this.spawnLayer = this.tileMap.createLayer('Spawns', this.tileSet, x, y);
+        this.spawnLayer = this.tileMap.createLayer('Spawn', this.tileSet, x, y);
         this.spawnLayer.setVisible(false);
-        this.crateLayer = this.tileMap.createLayer('Crates', this.tileSet, x, y);
-        this.crateLayer.setVisible(false);
-        this.floorLayer = this.tileMap.createLayer('Floors', this.tileSet, x, y);
+        this.nowCrateLayer = this.tileMap.createLayer('NowCrates', this.tileSet, x, y);
+        this.nowCrateLayer.setVisible(false);
+        this.thenCrateLayer = this.tileMap.createLayer('ThenCrates', this.tileSet, x, y);
+        this.thenCrateLayer.setVisible(false);
+        this.floorLayer = this.tileMap.createLayer('Floor', this.tileSet, x, y);
         this.wallLayer = this.tileMap.createLayer('Walls', this.tileSet, x, y);
-        this.goalLayer = this.tileMap.createLayer('Goals', this.tileSet, x, y);
+        this.goalLayer = this.tileMap.createLayer('Goal', this.tileSet, x, y);
     }
 
     createPlayer() {
         const { x, y } = this.tileMap.tileToWorldXY(this.spawnTile.x, this.spawnTile.y);
-        this.player = new Player(this, x, y, this.spawnTile);
+        this.player = new Player(this, x, y, this.spawnTile, this.goalTile);
         this.add.existing(this.player);
     }
 
     createCrates() {
-        this.crates = this.crateTiles.map((tile) => {
+        this.crates = [];
+        const nowCrates = this.nowCrateTiles.map((tile) => {
             const { x, y } = this.tileMap.tileToWorldXY(tile.x, tile.y);
-            const crate = new Crate(this, x, y, tile);
+            const crate = new NowCrate(this, x, y, tile);
             this.add.existing(crate);
             return crate;
         });
+        this.crates.push(...nowCrates);
+        const thenCrates = this.thenCrateTiles.map((tile) => {
+            const { x, y } = this.tileMap.tileToWorldXY(tile.x, tile.y);
+            const nowCrate = this.getCrateByTile(this.getTimeTravelTile(tile, this.nowCrateLayer));
+            const crate = new ThenCrate(this, x, y, tile, nowCrate);
+            this.add.existing(crate);
+            return crate;
+        });
+        this.crates.push(...thenCrates);
     }
 
     getCrateByTile(tile) {
@@ -102,8 +130,12 @@ export default class PlayScene extends Phaser.Scene {
         return goals[0];
     }
 
-    get crateTiles() {
-        return this.getTilesByLayer(this.crateLayer);
+    get nowCrateTiles() {
+        return this.getTilesByLayer(this.nowCrateLayer);
+    }
+
+    get thenCrateTiles() {
+        return this.getTilesByLayer(this.thenCrateLayer);
     }
 
     getTilesByLayer(layer, test = this.filterTilesByExistence) {
@@ -125,6 +157,12 @@ export default class PlayScene extends Phaser.Scene {
             default:
                 throw new Error('Invalid direction provided.');
         }
+    }
+
+    getTimeTravelTile(currentTile, layer) {
+        const { x, y } = currentTile;
+        const newX = (x + (this.tileMap.width / 2)) % this.tileMap.width;
+        return layer.getTileAt(newX, y);
     }
 
     filterTilesByExistence(tile) {
