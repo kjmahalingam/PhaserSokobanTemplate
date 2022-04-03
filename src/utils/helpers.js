@@ -1,7 +1,9 @@
 import { DIRECTIONS } from './constants';
 
+// Return whether the given tile has contents
 export const filterTilesByExistence = (tile) => tile.index > -1;
 
+// Get the adjacent tile in the given direction on the given layer
 export const getNextTile = (currentTile, direction, layer) => {
   const { x, y } = currentTile;
   switch (direction) {

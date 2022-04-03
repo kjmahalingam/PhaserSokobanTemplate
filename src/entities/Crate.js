@@ -1,6 +1,6 @@
-import BaseSprite from './BaseSprite';
+import Entity from './Entity';
 
-export default class Crate extends BaseSprite {
+export default class Crate extends Entity {
   constructor(scene, x, y, tile) {
     super(scene, x, y, tile, 'crate');
   }
