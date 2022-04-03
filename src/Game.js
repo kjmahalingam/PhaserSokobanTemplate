@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
-import { PlayScene } from './scenes';
+import PlayScene from './scenes';
 
-export const game = new Phaser.Game({
-    type: Phaser.AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
-    scene: PlayScene
+const game = new Phaser.Game({
+  type: Phaser.AUTO,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  scene: PlayScene,
 });
+export default game;

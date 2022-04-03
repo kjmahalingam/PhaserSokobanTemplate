@@ -1,1 +1,3 @@
-export { default as PlayScene } from './PlayScene';
+import PlayScene from './PlayScene';
+
+export default PlayScene;

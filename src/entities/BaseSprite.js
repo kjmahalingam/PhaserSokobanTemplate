@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DURATION } from '../utils/Movement'
+import { DURATION } from '../utils/constants';
 
 export default class BaseSprite extends Phaser.GameObjects.Sprite {
   constructor(scene, x, y, tile, name) {
@@ -15,7 +15,7 @@ export default class BaseSprite extends Phaser.GameObjects.Sprite {
       x: tile.pixelX,
       y: tile.pixelY,
       duration: DURATION,
-      ease: Phaser.Math.Easing.Quartic.Out
+      ease: Phaser.Math.Easing.Quartic.Out,
     });
   }
 

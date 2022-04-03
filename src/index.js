@@ -1,1 +1,2 @@
-import { game } from './Game';
+// eslint-disable-next-line no-unused-vars
+import game from './game';
