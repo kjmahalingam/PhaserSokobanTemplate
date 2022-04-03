@@ -1,10 +1,10 @@
-# Phaser 3 Webpack Project Template
+# Phaser 3 Sokoban Template
 
-A Phaser 3 project template with ES6 support via [Babel 7](https://babeljs.io/) and [Webpack 4](https://webpack.js.org/) that includes hot-reloading for development and production-ready builds.
+A [Phaser 3](https://phaser.io/phaser3) project template that is a base for a [Sokoban](https://en.wikipedia.org/wiki/Sokoban)-like game. It is intended to be used either to add levels to a functional Sokoban-like game, or to create a custom grid-based puzzle game from this framework and implementation.
 
-This has been updated for Phaser 3.50.0 version and above.
+## Attribution
 
-Loading images via JavaScript module `import` is also supported, although not recommended.
+This project is based on this [Phaser 3 Webpack Project Template](https://github.com/photonstorm/phaser3-project-template). The art in `assets/sprites` and `assets/tilesheets` was provided for free by [Kenney](https://www.kenney.nl/assets/sokoban). The level files in `assets/levels` were created in the [Tiled](https://www.mapeditor.org/) level editor.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ Loading images via JavaScript module `import` is also supported, although not re
 |---------|-------------|
 | `npm install` | Install project dependencies |
 | `npm start` | Build project and open web server running project |
-| `npm run build` | Builds code bundle with production settings (minification, uglification, etc..) |
+| `npm run lint` | Auto-formats code to conform to style standards |
 
 ## Writing Code
 
@@ -24,26 +24,21 @@ After cloning the repo, run `npm install` from your project directory. Then, you
 
 After starting the development server with `npm start`, you can edit any files in the `src` folder and webpack will automatically recompile and reload your server (available at `http://localhost:8080` by default).
 
-## Customizing the Template
+## Creating and Editing Levels
 
-### Babel
+Each level in `assets/levels` has a `level-x.json` and `level-x.tmx` file, where `x` is the number of the level.
 
-You can write modern ES6+ JavaScript and Babel will transpile it to a version of JavaScript that you want your project to support. The targeted browsers are set in the `.babelrc` file and the default currently targets all browsers with total usage over "0.25%" but excludes IE11 and Opera Mini.
+The `.tmx` file can be opened (or created) in the Tiled level editor, using `assets/tilesheets/sokoban.png` as the tilesheet. Each level expects the following layers:
 
- ```
-"browsers": [
-  ">0.25%",
-  "not ie 11",
-  "not op_mini all"
-]
- ```
+| Layer | Description |
+|-------|-------------|
+| `Crates` | The starting crate positions on the map. The sprites chosen for these are irrelevant, as the crates will be rendered as `assets/sprites/crate.png`. |
+| `CrateGoals` | The goal positions for the crates on the map. |
+| `Goal` | The goal position for the player on the map. There must be exactly one goal. |
+| `Spawn` | The starting player position on the map. There must be exactly one spawn. The sprite chosen for this is irrelevant, as the player will be rendered as `assets/sprites/player.png`. |
+| `Walls` | The immovable walls on the map. |
+| `Floor` | The flooring on the map. There must be flooring on each tile. |
 
-### Webpack
+After editing the level's `.tmx` file, it should be added to `assets/levels`. Additionally, a `.json` file should be exported for this level, and also added to `assets/levels`.
 
-If you want to customize your build, such as adding a new webpack loader or plugin (i.e. for loading CSS or fonts), you can modify the `webpack/base.js` file for cross-project changes, or you can modify and/or create new configuration files and target them in specific npm tasks inside of `package.json'.
-
-## Deploying Code
-
-After you run the `npm run build` command, your code will be built into a single bundle located at `dist/bundle.min.js` along with any other assets you project depended. 
-
-If you put the contents of the `dist` folder in a publicly-accessible location (say something like `http://mycoolserver.com`), you should be able to open `http://mycoolserver.com/index.html` and play your game.
+The const `MAX_LEVEL` in `src/utils/constants.js` should be changed to be equal to the number of levels in the game.
