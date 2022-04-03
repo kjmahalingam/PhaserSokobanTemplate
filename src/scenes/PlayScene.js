@@ -11,10 +11,10 @@ export default class PlayScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.tilemapTiledJSON(`level-${this.level}`, `src/assets/levels/level-${this.level}.json`);
-    this.load.image('sokoban', 'src/assets/tilesheets/sokoban.png');
-    this.load.image('crate', 'src/assets/sprites/crate.png');
-    this.load.image('player', 'src/assets/sprites/player.png');
+    this.load.tilemapTiledJSON(`level-${this.level}`, `assets/levels/level-${this.level}.json`);
+    this.load.image('sokoban', 'assets/tilesheets/sokoban.png');
+    this.load.image('crate', 'assets/sprites/crate.png');
+    this.load.image('player', 'assets/sprites/player.png');
   }
 
   create() {
